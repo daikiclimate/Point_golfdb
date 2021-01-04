@@ -5,7 +5,8 @@ from multiprocessing import Pool
 import numpy as np
 
 df = pd.read_pickle('golfDB.pkl')
-yt_video_dir = '../../database/videos/'
+yt_video_dir = '~/datasets/golf/'
+#yt_video_dir = '../../database/videos/'
 
 
 def preprocess_videos(anno_id, dim=160):
@@ -14,8 +15,9 @@ def preprocess_videos(anno_id, dim=160):
     """
 
     a = df.loc[df['id'] == anno_id]
-    bbox = a['bbox'][0]
-    events = a['events'][0]
+    print(a["bbox"])
+    bbox = a['bbox'].values[0]
+    events = a['events'].values[0]
 
     path = 'videos_{}/'.format(dim)
 
@@ -57,6 +59,7 @@ if __name__ == '__main__':
     path = 'videos_{}/'.format(160)
     if not os.path.exists(path):
         os.mkdir(path)
+    print(df.id[1])
     preprocess_videos(df.id[1])
-    # p = Pool(6)
-    # p.map(preprocess_videos, df.id)
+    #p = Pool(6)
+    #p.map(preprocess_videos, df.id)

@@ -2,3 +2,4 @@ idea/
 data/videos_160
 *.pkl
 *.tar
+models/
