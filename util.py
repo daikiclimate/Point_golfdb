@@ -3,6 +3,7 @@ import numpy as np
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
+
     def __init__(self):
         self.reset()
 
@@ -31,10 +32,10 @@ def correct_preds(probs, labels, tol=-1):
     events = np.where(labels < 8)[0]
     preds = np.zeros(len(events))
     if tol == -1:
-        tol = int(max(np.round((events[5] - events[0])/30), 1))
+        tol = int(max(np.round((events[5] - events[0]) / 30), 1))
     for i in range(len(events)):
         preds[i] = np.argsort(probs[:, i])[-1]
-    deltas = np.abs(events-preds)
+    deltas = np.abs(events - preds)
     correct = (deltas <= tol).astype(np.uint8)
     return events, preds, deltas, tol, correct
 
@@ -43,7 +44,7 @@ def freeze_layers(num_freeze, net):
     # print("Freezing {:2d} layers".format(num_freeze))
     i = 1
     for child in net.children():
-        if i ==1:
+        if i == 1:
             j = 1
             for child_child in child.children():
                 if j <= num_freeze:
