@@ -45,9 +45,12 @@ class PointGolfDB(Dataset):
 
         if self.train:
             # random starting position, sample 'seq_length' frames
-            start_frame = np.random.randint(events[-1] + 1)
+            start_frame = np.random.randint(events[-1] + 1 )
+            # start_frame = np.random.randint(events[-1] + 1 - self.seq_length)
+            # start_frame = max(0, start_frame - seq_length)
             cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
             pos = start_frame
+            # print(a["id"], pos)
             counter = 0
             poss = []
             while len(images) < self.seq_length:
@@ -55,6 +58,7 @@ class PointGolfDB(Dataset):
                 if ret:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     # img = cv2.GaussianBlur(img,(3,3),0)
+                    # img = cv2.medianBlur(img, 3)
                     # if counter == 0:
                     #     base_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                     #     base_img = cv2.cvtColor(base_img, cv2.COLOR_GRAY2RGB)
@@ -105,11 +109,11 @@ class PointGolfDB(Dataset):
                     points[i] = np.concatenate([points[i - 1][choice, :], points[i]])
             choice = np.random.choice(len(points[i]), self.npoints, replace=True)
             points[i] = points[i][choice, :]
-            points[i] = points[i] - np.expand_dims(
-                np.mean(points[i], axis=0), 0
-            )  # center
-            dist = np.max(np.sqrt(np.sum(points[i] ** 2, axis=1)), 0)
-            points[i] = points[i] / dist  # scale
+            # points[i] = points[i] - np.expand_dims(
+            #     np.mean(points[i], axis=0), 0
+            # )  # center
+            # dist = np.max(np.sqrt(np.sum(points[i] ** 2, axis=1)), 0)
+            # points[i] = points[i] / dist  # scale
 
         # exit()
         sample = {

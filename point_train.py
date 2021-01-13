@@ -16,15 +16,18 @@ if __name__ == "__main__":
     iterations = 2000
     it_save = 100  # save model every 100 iterations
     n_cpu = 6
-    seq_length = 64
-    bs = 22  # batch size
+    seq_length = 128
+    # seq_length = 64
+    bs = 2  # batch size
     k = 10  # frozen layers
 
     model = PointEventDetector(
         pretrain=True,
         width_mult=1.0,
         lstm_layers=1,
-        lstm_hidden=256,
+        # lstm_hidden=1024,
+        lstm_hidden=128,
+        # lstm_hidden=256,
         bidirectional=True,
         dropout=False,
     )
@@ -40,10 +43,13 @@ if __name__ == "__main__":
             [ToTensor(), Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]
         ),
         train=True,
+        npoints=2048,
         # npoints=1024,
-        npoints=256,
-        event_th=10
+        # npoints=256,
+        event_th=10,
         # event_th = 50
+        # base_list=[-1,-2,-3,-4,-5],
+        base_list=[-1,-5, -10, -20, -30],
     )
 
     data_loader = DataLoader(
