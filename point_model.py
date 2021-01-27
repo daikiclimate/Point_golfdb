@@ -18,6 +18,7 @@ class PointEventDetector(nn.Module):
         lstm_hidden,
         bidirectional=True,
         dropout=True,
+        feature_dim = 4
     ):
         super(PointEventDetector, self).__init__()
         self.width_mult = width_mult
@@ -26,17 +27,10 @@ class PointEventDetector(nn.Module):
         self.bidirectional = bidirectional
         self.dropout = dropout
 
-        # net = MobileNetV2(width_mult=width_mult)
-        # state_dict_mobilenet = torch.load('mobilenet_v2.pth.tar')
-        # if pretrain:
-        #     net.load_state_dict(state_dict_mobilenet)
-        #
-        # self.cnn = nn.Sequential(*list(net.children())[0][:19])
-        self.pointnet = PointNetfeat(global_feat=True)
+        self.pointnet = PointNetfeat(global_feat=True,  feature_dim = feature_dim)
 
         self.rnn = nn.LSTM(
             int(1024 * width_mult if width_mult > 1.0 else 1024),
-            # self.rnn = nn.LSTM(int(1280*width_mult if width_mult > 1.0 else 1280),
             self.lstm_hidden,
             self.lstm_layers,
             batch_first=True,
@@ -84,16 +78,9 @@ class PointEventDetector(nn.Module):
         # CNN forward
         p_in = x.view(batch_size * timesteps, C, N)
         p_out, _, _ = self.pointnet(p_in)
-        # print(x.shape)
-        # c_in = x.view(batch_size * timesteps, C, H, W)
-        # c_out = self.cnn(c_in)
-        # c_out = c_out.mean(3).mean(2)
-        # if self.dropout:
-        #     c_out = self.drop(c_out)
-        #
+
         # LSTM forward
         r_in = p_out.view(batch_size, timesteps, -1)
-        # r_in = c_out.view(batch_size, timesteps, -1)
         r_out, states = self.rnn(r_in, self.hidden)
         out = self.lin(r_out)
         out = out.view(batch_size * timesteps, 9)
@@ -102,15 +89,16 @@ class PointEventDetector(nn.Module):
 
 
 class STN3d(nn.Module):
-    def __init__(self):
+    def __init__(self, feature_dim = 4):
         super(STN3d, self).__init__()
-        self.conv1 = torch.nn.Conv1d(4, 64, 1)
-        # self.conv1 = torch.nn.Conv1d(3, 64, 1)
+        self.feature_dim = feature_dim
+        self.conv1 = torch.nn.Conv1d(self.feature_dim, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 16)
+        self.fc3 = nn.Linear(256, feature_dim**2)
+        # self.fc3 = nn.Linear(256, 16)
         # self.fc3 = nn.Linear(256, 9)
         self.relu = nn.ReLU()
 
@@ -120,7 +108,7 @@ class STN3d(nn.Module):
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(256)
 
-    def forward(self, x, feature_dim = 4):
+    def forward(self, x):
         batchsize = x.size()[0]
         # print(x.shape)
         x = F.relu(self.bn1(self.conv1(x)))
@@ -136,21 +124,17 @@ class STN3d(nn.Module):
         iden = (
             Variable(
                 torch.from_numpy(
-                        np.identity(feature_dim).astype(np.float32
-                    # np.array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]).astype(
-                        # np.float32
+                        np.identity(self.feature_dim).astype(np.float32
                     )
                 )
             )
-            .view(1, feature_dim**2)
+            .view(1, self.feature_dim**2)
             .repeat(batchsize, 1)
         )
-        # iden = Variable(torch.from_numpy(np.array([1,0,0,0,1,0,0,0,1]).astype(np.float32))).view(1,9).repeat(batchsize,1)
         if x.is_cuda:
             iden = iden.cuda()
         x = x + iden
-        x = x.view(-1, feature_dim, feature_dim)
-        # x = x.view(-1, 3, 3)
+        x = x.view(-1, self.feature_dim, self.feature_dim)
         return x
 
 
@@ -198,10 +182,10 @@ class STNkd(nn.Module):
 
 
 class PointNetfeat(nn.Module):
-    def __init__(self, global_feat=True, feature_transform=False):
+    def __init__(self, global_feat=True, feature_transform=False, feature_dim = 4):
         super(PointNetfeat, self).__init__()
-        self.stn = STN3d()
-        self.conv1 = torch.nn.Conv1d(4, 64, 1)
+        self.stn = STN3d(feature_dim = feature_dim)
+        self.conv1 = torch.nn.Conv1d(feature_dim, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
         self.bn1 = nn.BatchNorm1d(64)

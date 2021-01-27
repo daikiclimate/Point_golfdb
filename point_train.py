@@ -4,8 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from point_dataloader import Normalize, PointGolfDB, ToTensor
-# from dataloader import GolfDB, Normalize, ToTensor
+from point_dataloader import PointGolfDB
 from point_model import PointEventDetector
 from util import *
 
@@ -30,6 +29,7 @@ if __name__ == "__main__":
         # lstm_hidden=256,
         bidirectional=True,
         dropout=False,
+        feature_dim = 5
     )
     freeze_layers(k, model)
     model.train()
@@ -39,12 +39,9 @@ if __name__ == "__main__":
         data_file="data/train_split_{}.pkl".format(split),
         vid_dir="data/videos_160/",
         seq_length=seq_length,
-        transform=transforms.Compose(
-            [ToTensor(), Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]
-        ),
         train=True,
-        npoints=2048,
-        # npoints=1024,
+        # npoints=2048,
+        npoints=1024,
         # npoints=256,
         event_th=10,
         # event_th = 50
@@ -75,7 +72,6 @@ if __name__ == "__main__":
     while i < iterations:
         for sample in data_loader:
             points, labels = sample["points"].cuda(), sample["labels"].cuda()
-            # images, labels = sample['images'].cuda(), sample['labels'].cuda()
             logits = model(points)
             labels = labels.view(bs * seq_length)
             loss = criterion(logits, labels)
