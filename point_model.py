@@ -89,7 +89,7 @@ class PointEventDetector(nn.Module):
 
 
 class STN3d(nn.Module):
-    def __init__(self, feature_dim = 4):
+    def __init__(self, feature_dim = 3):
         super(STN3d, self).__init__()
         self.feature_dim = feature_dim
         self.conv1 = torch.nn.Conv1d(self.feature_dim, 64, 1)
@@ -182,7 +182,7 @@ class STNkd(nn.Module):
 
 
 class PointNetfeat(nn.Module):
-    def __init__(self, global_feat=True, feature_transform=False, feature_dim = 4):
+    def __init__(self, global_feat=True, feature_transform=False, feature_dim = 3):
         super(PointNetfeat, self).__init__()
         self.stn = STN3d(feature_dim = feature_dim)
         self.conv1 = torch.nn.Conv1d(feature_dim, 64, 1)
@@ -225,10 +225,10 @@ class PointNetfeat(nn.Module):
 
 
 class PointNetCls(nn.Module):
-    def __init__(self, k=2, feature_transform=False):
+    def __init__(self, k=2, feature_transform=False, feature_dim =3):
         super(PointNetCls, self).__init__()
         self.feature_transform = feature_transform
-        self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform)
+        self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform, feature_dim = feature_dim)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, k)
@@ -242,7 +242,8 @@ class PointNetCls(nn.Module):
         x = F.relu(self.bn1(self.fc1(x)))
         x = F.relu(self.bn2(self.dropout(self.fc2(x))))
         x = self.fc3(x)
-        return F.log_softmax(x, dim=1), trans, trans_feat
+        return x
+        # return F.log_softmax(x, dim=1), trans, trans_feat
 
 
 class PointNetDenseCls(nn.Module):

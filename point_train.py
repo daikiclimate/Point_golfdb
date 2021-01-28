@@ -5,8 +5,10 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from point_dataloader import PointGolfDB
-from point_model import PointEventDetector
+from point_model import PointEventDetector, PointNetCls
 from util import *
+
+from icecream import ic
 
 if __name__ == "__main__":
 
@@ -31,6 +33,9 @@ if __name__ == "__main__":
         dropout=False,
         feature_dim = 5
     )
+
+    model = PointNetCls(k = 9, feature_dim = 5)
+
     freeze_layers(k, model)
     model.train()
     model.cuda()
@@ -43,10 +48,12 @@ if __name__ == "__main__":
         # npoints=2048,
         npoints=1024,
         # npoints=256,
-        event_th=10,
+        event_th=50,
         # event_th = 50
         # base_list=[-1,-2,-3,-4,-5],
         base_list=[-1,-5, -10, -20, -30],
+        gausian = True,
+        median = True,
     )
 
     data_loader = DataLoader(
@@ -72,7 +79,10 @@ if __name__ == "__main__":
     while i < iterations:
         for sample in data_loader:
             points, labels = sample["points"].cuda(), sample["labels"].cuda()
+            bs, seq, dim, n_points = points.shape
+            points = points.view(bs * seq, dim , n_points)
             logits = model(points)
+            preds = torch.argmax(logits, axis=1)
             labels = labels.view(bs * seq_length)
             loss = criterion(logits, labels)
             optimizer.zero_grad()

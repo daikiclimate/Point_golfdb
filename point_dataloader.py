@@ -7,6 +7,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
+from icecream import ic
+
 
 class PointGolfDB(Dataset):
     def __init__(
@@ -20,6 +22,8 @@ class PointGolfDB(Dataset):
         base_list=[-5, -10, -20, -30],
         gausian = True,
         median = False,
+        expand = True,
+        dim = 5
     ):
         self.df = pd.read_pickle(data_file)
         self.vid_dir = vid_dir
@@ -31,6 +35,7 @@ class PointGolfDB(Dataset):
         self.base_list = base_list
         self.gausian = gausian
         self.median = median
+        self.expand = expand
 
     def __len__(self):
         return len(self.df)
@@ -40,7 +45,8 @@ class PointGolfDB(Dataset):
         events = a["events"]
         events -= events[
             0
-        ]  # now frame #s correspond to frames in preprocessed video clips
+        ]
+        # now frame #s correspond to frames in preprocessed video clips
 
         images, labels = [], []
         points = []
@@ -50,7 +56,7 @@ class PointGolfDB(Dataset):
         if self.train:
             # random starting position, sample 'seq_length' frames
             start_frame = np.random.randint(events[-1] + 1 )
-            print(a["id"], "+",start_frame)
+            # ic(a["id"], "+",start_frame)
             # start_frame = np.random.randint(events[-1] + 1 - self.seq_length)
             # start_frame = max(0, start_frame - seq_length)
             cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
@@ -97,14 +103,24 @@ class PointGolfDB(Dataset):
         points = bases_points(images, self.base_list, self.event_th)
         # resample
         for i in range(len(points)):
+            # ic(len(points[i]))
             if len(points[i]) < self.npoints:
-                choice = np.random.choice(
-                    len(points[i - 1]), self.npoints, replace=True
-                )
-                if len(points[i]) == 0:
-                    points[i] = points[i - 1][choice, :]
+                if self.expand: 
+                    _num_points = len(points[i])
+                    dim = points[i][0].shape[0]
+                    _padding = np.zeros([self.npoints, dim])
+                    _padding[:_num_points] = points[i]
+                    points[i] = _padding
                 else:
-                    points[i] = np.concatenate([points[i - 1][choice, :], points[i]])
+                    #sampling from previous points
+                    choice = np.random.choice(
+                        len(points[i - 1]), self.npoints, replace=True
+                    )
+                    if len(points[i]) == 0:
+                        points[i] = points[i - 1][choice, :]
+                    else:
+                        points[i] = np.concatenate([points[i - 1][choice, :], points[i]])
+
             choice = np.random.choice(len(points[i]), self.npoints, replace=True)
             points[i] = points[i][choice, :]
             # points[i] = points[i] - np.expand_dims(
@@ -121,7 +137,7 @@ class PointGolfDB(Dataset):
         #     points = points[sf:sf + self.seq_length]
         #     labels = labels[sf:sf + self.seq_length]
         #     print(images.shape)
-        #     print(points.shape)
+            # print(points.shape)
         #     print(labels.shape)
 
         sample = {
@@ -181,8 +197,7 @@ def bases_points(imgs, base_list, th):
         if len(pts) != 0:
             image_points.append(np.concatenate(pts, axis=0))
         else:
-            print("i")
-            image_points.append([[0, 0, 0, 0, 0]])
+            image_points.append(np.array([[0, 0, 0, 0, 0]]))
     return image_points
 
 
@@ -193,6 +208,6 @@ if __name__ == "__main__":
         seq_length=64,
         train=True,
     )
-    for i in dataset[1]:
+    for i in dataset:
         pass
 
