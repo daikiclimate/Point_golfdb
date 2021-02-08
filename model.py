@@ -14,6 +14,7 @@ class EventDetector(nn.Module):
         lstm_hidden,
         bidirectional=True,
         dropout=True,
+        device = "cuda:0",
     ):
         super(EventDetector, self).__init__()
         self.width_mult = width_mult
@@ -21,10 +22,11 @@ class EventDetector(nn.Module):
         self.lstm_hidden = lstm_hidden
         self.bidirectional = bidirectional
         self.dropout = dropout
+        self.device = device
 
         net = MobileNetV2(width_mult=width_mult)
-        state_dict_mobilenet = torch.load("mobilenet_v2.pth.tar")
         if pretrain:
+            state_dict_mobilenet = torch.load("mobilenet_v2.pth.tar")
             net.load_state_dict(state_dict_mobilenet)
 
         self.cnn = nn.Sequential(*list(net.children())[0][:19])
@@ -48,24 +50,28 @@ class EventDetector(nn.Module):
                 Variable(
                     torch.zeros(
                         2 * self.lstm_layers, batch_size, self.lstm_hidden
-                    ).cuda(),
+                    ).to(self.device),
+                    # ).cuda(),
                     requires_grad=True,
                 ),
                 Variable(
                     torch.zeros(
                         2 * self.lstm_layers, batch_size, self.lstm_hidden
-                    ).cuda(),
+                    # ).cuda(),
+                    ).to(self.device),
                     requires_grad=True,
                 ),
             )
         else:
             return (
                 Variable(
-                    torch.zeros(self.lstm_layers, batch_size, self.lstm_hidden).cuda(),
+                    # torch.zeros(self.lstm_layers, batch_size, self.lstm_hidden).cuda(),
+                    torch.zeros(self.lstm_layers, batch_size, self.lstm_hidden).to(self.device),
                     requires_grad=True,
                 ),
                 Variable(
-                    torch.zeros(self.lstm_layers, batch_size, self.lstm_hidden).cuda(),
+                    torch.zeros(self.lstm_layers, batch_size, self.lstm_hidden).to(self.device),
+                    # torch.zeros(self.lstm_layers, batch_size, self.lstm_hidden).cuda(),
                     requires_grad=True,
                 ),
             )
