@@ -1,4 +1,7 @@
 # GolfDB: A Video Database for Golf Swing Sequencing
+##
+GolfDB with PointNet
+
 
 ## Introduction
 GolfDB is a high-quality video dataset created for general recognition applications 
